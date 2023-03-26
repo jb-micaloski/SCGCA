@@ -20,10 +20,10 @@ def cria_aspirantes(pben):
 
         aspirante.numero_interno_atual = pben['Número Interno Atual'][i]
         #Alterar datas
-        aspirante.numero_interno_2021 = pben['Número Interno 2022'][i]
-        aspirante.numero_interno_2020 = pben['Número Interno 2021'][i]
-        aspirante.numero_interno_2019 = pben['Número Interno 2020'][i]
-        aspirante.numero_interno_2018 = pben['Número Interno 2019'][i]
+        aspirante.numero_interno_2022 = pben['Número Interno 2022'][i]
+        aspirante.numero_interno_2021 = pben['Número Interno 2021'][i]
+        aspirante.numero_interno_2020 = pben['Número Interno 2020'][i]
+        aspirante.numero_interno_2019 = pben['Número Interno 2019'][i]
         aspirante.nome_guerra = pben['Nome de Guerra'][i]
         aspirante.nome_completo = pben['Nome Completo'][i]
         aspirante.companhia = pben['Companhia'][i]

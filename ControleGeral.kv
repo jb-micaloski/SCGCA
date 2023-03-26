@@ -578,12 +578,13 @@ MenuScreen
                             group: 'licenca'
                             id: reg_btn
                             text: 'Regresso'
+                            value: 'A bordo'
                             pos_hint: {'center_x': .5, 'center_y': .5}
                             background_color: 0.7, 0.56, 0.4, 1
                             text_color: 0.77,0.77,0.77,1
                             bold: True
                             on_state:
-                                if self.state == 'down': app.BOTAO_PRESSIONADO = self.text
+                                if self.state == 'down': app.BOTAO_PRESSIONADO = self.value
                                 else: app.BOTAO_PRESSIONADO = ''
                         ToggleButton:
                             group: 'licenca'
@@ -1249,6 +1250,7 @@ MenuScreen
 #Claviculario
 
 <ChavesScreen>:
+    
     BoxLayout:
         canvas.before:
             Color:
@@ -1370,10 +1372,13 @@ MenuScreen
                 color: 0.18, 0.28, 0.40, 1
                 bold: True
             TextInput:
+                id: chave_pesquisa
                 pos_hint: {'center_x': .5, 'center_y': .5}
                 multiline: False
                 size_hint: .5, .4
-                on_text_validate: app.input_texto_chave(self)
+                on_text_validate: 
+                    app.input_texto_chave(self.text)
+                    chave_pesquisa.text = ''
     Label:
         size_hint: .1,1
 
@@ -1420,10 +1425,13 @@ MenuScreen
         bold: True
         pos_hint: {'center_x': .5, 'center_y': .5}
     TextInput:
+        id:  chave_pesquisa2 
         pos_hint: {'center_x': .5, 'center_y': .5}
         multiline: False
         size_hint: .5, .4
-        on_text_validate: app.dar_chave(self)
+        on_text_validate: 
+            app.dar_chave(chave_pesquisa2.text);
+            chave_pesquisa2.text = ''
     Button:
         text: 'Retornar chave'
         pos_hint: {'center_x': .5, 'center_y': .5}
@@ -1577,7 +1585,7 @@ MenuScreen
                         multiline: False
                         text_validate_unfocus: False
                         on_text_validate:
-                            app.consultar_partealta(chave_pesquisa.text)
+                            app.consultar_partealta(self.text)
                             app.atualiza_partealta(app.botao_parte_alta)
                             chave_pesquisa.text = ''
 

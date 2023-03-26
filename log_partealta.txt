@@ -12,3 +12,19 @@ Número interno: 1001, Situação atual: A bordo, Última alteração: 20/03/202
 Número interno: 4030, Situação atual: Licença, Última alteração: 21/03/2023 00:20
 Número interno: 1001, Situação atual: Licença, Última alteração: 21/03/2023 00:28
 Alterações Salvas em: 21/03/2023 00:42
+Alterações Salvas em: 23/03/2023 20:28
+Número interno: 1001, Situação atual: , Última alteração: 24/03/2023 10:45
+Número interno: 1001, Situação atual: A bordo, Última alteração: 24/03/2023 10:55
+Número interno: 1001, Situação atual: A bordo, Última alteração: 24/03/2023 10:55
+Número interno: 1001, Situação atual: Banco, Última alteração: 24/03/2023 11:08
+Número interno: 1001, Situação atual: Banco, Última alteração: 24/03/2023 11:21
+Número interno: 1001, Situação atual: , Última alteração: 
+Número interno: 1001, Situação atual: , Última alteração: 
+Número interno: 1001, Situação atual: , Última alteração: 
+Número interno: 1001, Situação atual: , Última alteração: 
+Número interno: 1001, Situação atual: A bordo, Última alteração: 25/03/2023 20:47
+Número interno: 1001, Situação atual: A bordo, Última alteração: 25/03/2023 20:47
+Número interno: 1001, Situação atual: A bordo, Última alteração: 25/03/2023 20:47
+Número interno: 1001, Situação atual: , Última alteração: 
+Número interno: 4001, Situação atual: , Última alteração: 
+Número interno: 4001, Situação atual: , Última alteração: 

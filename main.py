@@ -50,7 +50,8 @@ class ResumoLicencasScreen(Screen):
     pass
 
 class ChavesScreen(Screen):
-    pass
+    chave_pesquisa = ObjectProperty(None)
+    chave_pesquisa2 = ObjectProperty(None)
 
 class RegistroChavesScreen(Screen):
     pass
@@ -78,12 +79,20 @@ class ControleGeral(App):
 
         self.aspirantes = cria_aspirantes(self.pben)
 
-        self.licencas = pd.read_excel('teste.ods', engine = 'odf', sheet_name= 'Licenças')
-        self.licencas['Última Alteração'] = self.licencas['Última Alteração'].astype('str')
-        self.licencas['Número Interno'] = self.licencas['Número Interno'].astype('str')
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT NumeroInt, Situacao FROM dados_lic')
+        licencas_num_sit = cursor.fetchall()
+
+        self.licencas = pd.DataFrame(licencas_num_sit, columns=['Número Interno','Situação'])
 
         self.popup_content= Label(text='Salvando...',color = (0.18, 0.28, 0.40, 1), bold= True)
         self.popup_salvando_licenca = Popup(title ='Salvando',content = self.popup_content,
+        size_hint=(None, None), size=(300, 300))
+
+        self.popup_content2= Label(text='O Número/Nome não foi encontrado! Tente novamente',color = (0.18, 0.28, 0.40, 1), bold= True)
+        self.popup_verica_numero = Popup(title ='Erro!',content = self.popup_content2,
         size_hint=(None, None), size=(300, 300))
 
         self.organiza_controle_geral_licenca()
@@ -91,16 +100,24 @@ class ControleGeral(App):
         self.organiza_segundo_licenca()
         self.organiza_terceiro_licenca()
         self.organiza_quarto_licenca()
+        
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT NumerodaChave,Anterior, Atual FROM dados_chave')
+        chaves_num_sit = cursor.fetchall()
 
-        self.chaves = pd.read_excel('teste.ods', engine = 'odf', sheet_name= 'Chaves')
-        self.chaves['Última Alteração'] = self.chaves['Última Alteração'].astype('str')
-        self.chaves['Anterior'] = self.chaves['Anterior'].astype('str')
-        self.chaves['Atual'] = self.chaves['Atual'].astype('str')
+        self.licencas = pd.DataFrame(chaves_num_sit, columns=['Número da Chave','Situação Anterior','Situação Atual'])
+
         self.organiza_claviculario()
 
-        self.partealta = pd.read_excel('teste.ods', engine = 'odf', sheet_name= 'ParteAlta')
-        self.partealta['Última Alteração'] = self.partealta['Última Alteração'].astype('str')
-        self.partealta['Número Interno'] = self.partealta['Número Interno'].astype('str')
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT NumeroInt, Situacao FROM dados_partealta')
+        partealta_num_sit = cursor.fetchall()
+
+        self.partealta = pd.DataFrame(partealta_num_sit, columns=['Número Interno','Situação'])
 
         self.organiza_controle_geral_partealta()
         self.organiza_primeiro_partealta()
@@ -324,33 +341,50 @@ class ControleGeral(App):
     BOTAO_PRESSIONADO = StringProperty('')
 
     def consultar_licenca(self, chave_pesquisa):
+       
         self.consulta_pben(chave_pesquisa)
-        
-        info_licencas = busca_licenca(self.numero_atual, self.licencas)
-        self.situacao_atual_licenca = info_licencas[0]
-        self.ultima_alteracao_licenca = info_licencas[1]
-        print("Botão pressionado: " + self.BOTAO_PRESSIONADO)
+
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
+
+        numero_int = str(self.numero_atual)
+
+        cursor.execute('SELECT Situacao, UltimaAlt FROM dados_lic WHERE NumeroInt = ?', (numero_int,))
+
+        info_licencas = cursor.fetchone()
+
+        self.situacao_atual_licenca = str(info_licencas[0])
+        self.ultima_alteracao_licenca = str(info_licencas[1])
+
+        conn.commit()
+        conn.close()
 
     def atualiza_licenca(self, button_text):
-        #print("Botão pressionado: " + button_text)
         if button_text == "":
             pass
         else:
             try:
-                index = self.licencas.query('`Número Interno` == @self.numero_atual').index.tolist()[0]
-                if button_text == 'Regresso':
-                    self.licencas['Situação'][index] = 'A bordo'
-                else:
-                    self.licencas['Situação'][index] = button_text
-                self.licencas['Última Alteração'][index] = datetime.now().strftime('%d/%m/%Y %H:%M')
-                self.licenca_salvou = 'Alterações pendentes'
+                conn = sqlite3.connect('dados.db')
+                cursor = conn.cursor()
+
+                numero_int = self.numero_atual
+                nova_sit = str(self.BOTAO_PRESSIONADO)
+                nova_ultimaalt = datetime.now().strftime('%d/%m/%Y %H:%M')
+                consulta_sql = 'UPDATE dados_lic SET Situacao = ?, UltimaAlt = ? WHERE NumeroInt = ?'
+                cursor.execute(consulta_sql, (nova_sit, nova_ultimaalt, numero_int))
+                conn.commit()
+
             except:
                 self.numero_atual = 'Selecione um aspirante'
                 self.nome_guerra = ''
+        
+        cursor.execute("SELECT Situacao, UltimaAlt FROM dados_lic WHERE NumeroInt = ?", (numero_int,))
+        info_licencas = cursor.fetchone()
+        self.situacao_atual_licenca = str(info_licencas[0])
+        self.ultima_alteracao_licenca = str(info_licencas[1])
 
-        info_licencas = busca_licenca(self.numero_atual, self.licencas)
-        self.situacao_atual_licenca = info_licencas[0]
-        self.ultima_alteracao_licenca = info_licencas[1]
+        conn.commit()
+        conn.close()
 
         self.registro_licencas()
         self.organiza_controle_geral_licenca()
@@ -387,208 +421,283 @@ class ControleGeral(App):
         self.popup_salvando_licenca.dismiss()
 
     def organiza_controle_geral_licenca(self):
-        dicionario_licencas_geral = dict(self.licencas['Situação'].value_counts())
-        try:
-            self.abordo_licenca = str(dicionario_licencas_geral['A bordo'])
-        except:
-            self.abordo_licenca = '0'
-        try:
-            self.baixado_licenca = str(dicionario_licencas_geral['Baixado'])
-        except:
-            self.baixado_licenca = '0'
-        try:
-            self.crestricao_licenca = str(dicionario_licencas_geral['C/ Restrição'])
-        except:
-            self.crestricao_licenca = '0'
-        try:
-            self.dispdomiciliar_licenca = str(dicionario_licencas_geral['Disp. Domiciliar'])
-        except:
-            self.dispdomiciliar_licenca = '0'
-        try:
-            self.hnmd_licenca = str(dicionario_licencas_geral['HNMD'])
-        except:
-            self.hnmd_licenca = '0'
-        try:
-            self.lts_licenca = str(dicionario_licencas_geral['LTS'])
-        except:
-            self.lts_licenca = '0'
-        try:
-            self.licenciados_licenca = str(dicionario_licencas_geral['Licença'])
-        except:
-            self.licenciados_licenca = '0'
-        try:
-            self.stgt_licenca = str(dicionario_licencas_geral['ST/GT'])
-        except:
-            self.stgt_licenca = '0'
+
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'A bordo'")
+        result = cursor.fetchone()
+        self.abordo_licenca = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'Baixado'")
+        result = cursor.fetchone()
+        self.baixado_licenca = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'C/ Restrição'")
+        result = cursor.fetchone()
+        self.crestricao_licenca = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'Disp. Domiciliar'")
+        result = cursor.fetchone()
+        self.dispdomiciliar_licenca = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'LTS'")
+        result = cursor.fetchone()
+        self.lts_licenca = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'HNMD'")
+        result = cursor.fetchone()
+        self.hnmd_licenca = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'Licença'")
+        result = cursor.fetchone()
+        self.licenciados_licenca = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'ST/GT'")
+        result = cursor.fetchone()
+        self.stgt_licenca = str(result[0])
+
+        conn.commit()
+        conn.close()
 
     def organiza_primeiro_licenca(self):
-        query = self.licencas.query('`Ano` == 1')
-        dicionario_primeiro_licenca = dict(query['Situação'].value_counts())
-        try:
-            self.abordo_licenca1 = str(dicionario_primeiro_licenca['A bordo'])
-        except:
-            self.abordo_licenca1 = '0'
-        try:
-            self.baixado_licenca1 = str(dicionario_primeiro_licenca['Baixado'])
-        except:
-            self.baixado_licenca1 = '0'
-        try:
-            self.crestricao_licenca1 = str(dicionario_primeiro_licenca['C/ Restrição'])
-        except:
-            self.crestricao_licenca1 = '0'
-        try:
-            self.dispdomiciliar_licenca1 = str(dicionario_primeiro_licenca['Disp. Domiciliar'])
-        except:
-            self.dispdomiciliar_licenca1 = '0'
-        try:
-            self.hnmd_licenca1 = str(dicionario_primeiro_licenca['HNMD'])
-        except:
-            self.hnmd_licenca1 = '0'
-        try:
-            self.lts_licenca1 = str(dicionario_primeiro_licenca['LTS'])
-        except:
-            self.lts_licenca1 = '0'
-        try:
-            self.licenciados_licenca1 = str(dicionario_primeiro_licenca['Licença'])
-        except:
-            self.licenciados_licenca1 = '0'
-        try:
-            self.stgt_licenca1 = str(dicionario_primeiro_licenca['ST/GT'])
-        except:
-            self.stgt_licenca1 = '0'
-    
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'A bordo' AND Ano = 1")
+        result = cursor.fetchone()
+        self.abordo_licenca1 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'Baixado' AND Ano = 1")
+        result = cursor.fetchone()
+        self.baixado_licenca1 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'C/ Restrição' AND Ano = 1")
+        result = cursor.fetchone()
+        self.crestricao_licenca1 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'Disp. Domiciliar' AND Ano = 1")
+        result = cursor.fetchone()
+        self.dispdomiciliar_licenca1 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'LTS' AND Ano = 1")
+        result = cursor.fetchone()
+        self.lts_licenca1 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'HNMD' AND Ano = 1")
+        result = cursor.fetchone()
+        self.hnmd_licenca1 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'Licença' AND Ano = 1")
+        result = cursor.fetchone()
+        self.licenciados_licenca1 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'ST/GT' AND Ano = 1")
+        result = cursor.fetchone()
+        self.stgt_licenca1 = str(result[0])
+
+        conn.commit()
+        conn.close()
+          
     def organiza_segundo_licenca(self):
-        query = self.licencas.query('`Ano` == 2')
-        dicionario_segundo_licenca = dict(query['Situação'].value_counts())
-        try:
-            self.abordo_licenca2 = str(dicionario_segundo_licenca['A bordo'])
-        except:
-            self.abordo_licenca2 = '0'
-        try:
-            self.baixado_licenca2 = str(dicionario_segundo_licenca['Baixado'])
-        except:
-            self.baixado_licenca2 = '0'
-        try:
-            self.crestricao_licenca2 = str(dicionario_segundo_licenca['C/ Restrição'])
-        except:
-            self.crestricao_licenca2 = '0'
-        try:
-            self.dispdomiciliar_licenca2 = str(dicionario_segundo_licenca['Disp. Domiciliar'])
-        except:
-            self.dispdomiciliar_licenca2 = '0'
-        try:
-            self.hnmd_licenca2 = str(dicionario_segundo_licenca['HNMD'])
-        except:
-            self.hnmd_licenca2 = '0'
-        try:
-            self.lts_licenca2 = str(dicionario_segundo_licenca['LTS'])
-        except:
-            self.lts_licenca2 = '0'
-        try:
-            self.licenciados_licenca2 = str(dicionario_segundo_licenca['Licença'])
-        except:
-            self.licenciados_licenca2 = '0'
-        try:
-            self.stgt_licenca2 = str(dicionario_segundo_licenca['ST/GT'])
-        except:
-            self.stgt_licenca2 = '0'
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'A bordo' AND Ano = 2")
+        result = cursor.fetchone()
+        self.abordo_licenca2 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'Baixado' AND Ano = 2")
+        result = cursor.fetchone()
+        self.baixado_licenca2 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'C/ Restrição' AND Ano = 2")
+        result = cursor.fetchone()
+        self.crestricao_licenca2 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'Disp. Domiciliar' AND Ano = 2")
+        result = cursor.fetchone()
+        self.dispdomiciliar_licenca2 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'LTS' AND Ano = 2")
+        result = cursor.fetchone()
+        self.lts_licenca2 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'HNMD' AND Ano = 2")
+        result = cursor.fetchone()
+        self.hnmd_licenca2 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'Licença' AND Ano = 2")
+        result = cursor.fetchone()
+        self.licenciados_licenca2 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'ST/GT' AND Ano = 2")
+        result = cursor.fetchone()
+        self.stgt_licenca2 = str(result[0])
+
+        conn.commit()
+        conn.close()
         
     def organiza_terceiro_licenca(self):
-        query = self.licencas.query('`Ano` == 3')
-        dicionario_terceiro_licenca = dict(query['Situação'].value_counts())
-        try:
-            self.abordo_licenca3 = str(dicionario_terceiro_licenca['A bordo'])
-        except:
-            self.abordo_licenca3 = '0'
-        try:
-            self.baixado_licenca3 = str(dicionario_terceiro_licenca['Baixado'])
-        except:
-            self.baixado_licenca3 = '0'
-        try:
-            self.crestricao_licenca3 = str(dicionario_terceiro_licenca['C/ Restrição'])
-        except:
-            self.crestricao_licenca3 = '0'
-        try:
-            self.dispdomiciliar_licenca3 = str(dicionario_terceiro_licenca['Disp. Domiciliar'])
-        except:
-            self.dispdomiciliar_licenca3 = '0'
-        try:
-            self.hnmd_licenca3 = str(dicionario_terceiro_licenca['HNMD'])
-        except:
-            self.hnmd_licenca3 = '0'
-        try:
-            self.lts_licenca3 = str(dicionario_terceiro_licenca['LTS'])
-        except:
-            self.lts_licenca3 = '0'
-        try:
-            self.licenciados_licenca3 = str(dicionario_terceiro_licenca['Licença'])
-        except:
-            self.licenciados_licenca3 = '0'
-        try:
-            self.stgt_licenca3 = str(dicionario_terceiro_licenca['ST/GT'])
-        except:
-            self.stgt_licenca3 = '0'
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'A bordo' AND Ano = 3")
+        result = cursor.fetchone()
+        self.abordo_licenca3 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'Baixado' AND Ano = 3")
+        result = cursor.fetchone()
+        self.baixado_licenca3 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'C/ Restrição' AND Ano = 3")
+        result = cursor.fetchone()
+        self.crestricao_licenca3 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'Disp. Domiciliar' AND Ano = 3")
+        result = cursor.fetchone()
+        self.dispdomiciliar_licenca3 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'LTS' AND Ano = 3")
+        result = cursor.fetchone()
+        self.lts_licenca3 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'HNMD' AND Ano = 3")
+        result = cursor.fetchone()
+        self.hnmd_licenca3 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'Licença' AND Ano = 3")
+        result = cursor.fetchone()
+        self.licenciados_licenca3 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'ST/GT' AND Ano = 3")
+        result = cursor.fetchone()
+        self.stgt_licenca3 = str(result[0])
+
+        conn.commit()
+        conn.close()
 
     def organiza_quarto_licenca(self):
-        query = self.licencas.query('`Ano` == 4')
-        dicionario_quarto_licenca = dict(query['Situação'].value_counts())
-        try:
-            self.abordo_licenca4 = str(dicionario_quarto_licenca['A bordo'])
-        except:
-            self.abordo_licenca4 = '0'
-        try:
-            self.baixado_licenca4 = str(dicionario_quarto_licenca['Baixado'])
-        except:
-            self.baixado_licenca4 = '0'
-        try:
-            self.crestricao_licenca4 = str(dicionario_quarto_licenca['C/ Restrição'])
-        except:
-            self.crestricao_licenca4 = '0'
-        try:
-            self.dispdomiciliar_licenca4 = str(dicionario_quarto_licenca['Disp. Domiciliar'])
-        except:
-            self.dispdomiciliar_licenca4 = '0'
-        try:
-            self.hnmd_licenca4 = str(dicionario_quarto_licenca['HNMD'])
-        except:
-            self.hnmd_licenca4 = '0'
-        try:
-            self.lts_licenca4 = str(dicionario_quarto_licenca['LTS'])
-        except:
-            self.lts_licenca4 = '0'
-        try:
-            self.licenciados_licenca4 = str(dicionario_quarto_licenca['Licença'])
-        except:
-            self.licenciados_licenca4 = '0'
-        try:
-            self.stgt_licenca4 = str(dicionario_quarto_licenca['ST/GT'])
-        except:
-            self.stgt_licenca4 = '0'
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'A bordo' AND Ano = 4")
+        result = cursor.fetchone()
+        self.abordo_licenca4 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'Baixado' AND Ano = 4")
+        result = cursor.fetchone()
+        self.baixado_licenca4 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'C/ Restrição' AND Ano = 4")
+        result = cursor.fetchone()
+        self.crestricao_licenca4 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'Disp. Domiciliar' AND Ano = 4")
+        result = cursor.fetchone()
+        self.dispdomiciliar_licenca4 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'LTS' AND Ano = 4")
+        result = cursor.fetchone()
+        self.lts_licenca4 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'HNMD' AND Ano = 4")
+        result = cursor.fetchone()
+        self.hnmd_licenca4 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'Licença' AND Ano = 4")
+        result = cursor.fetchone()
+        self.licenciados_licenca4 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_lic WHERE Situacao = 'ST/GT' AND Ano = 4")
+        result = cursor.fetchone()
+        self.stgt_licenca4 = str(result[0])
+
+        conn.commit()
+        conn.close()
 
     def input_texto_chave(self,textbox):
-        self.chave_input = textbox.text
-        info_chaves = busca_chave(self.chave_input,self.chaves)
-        self.chave_input = info_chaves[0]
-        self.chave_atualmente_com = info_chaves[2]
-        self.chave_anteriormente_com = info_chaves[1]
-        self.chave_ultima_alteracao = info_chaves[3]
+        self.chave_input = textbox
     
-    def dar_chave(self,textbox):
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
+
+        numero_chave = str(self.chave_input)
+
+        cursor.execute('SELECT NumerodaChave, Anterior, Atual, ÚltimaAlteração FROM dados_chave WHERE NumerodaChave = ?', (numero_chave,))
+
+        info_licencas = cursor.fetchone()
+
+        self.chave_input = str(info_licencas[0])
+        self.chave_anteriormente_com = str(info_licencas[1])
+        self.chave_atualmente_com = str(info_licencas[2])
+        self.chave_ultima_alteracao = str(info_licencas[3])
+
+        conn.commit()
+        conn.close()
+
+    def dar_chave(self,chave_pesquisa2):
         try:
-            index = self.chaves.query('`Numero da Chave` == @self.chave_input').index.tolist()[0]
+            conn = sqlite3.connect('dados.db')
+            cursor = conn.cursor()
 
-            self.chaves['Anterior'][index] = self.chaves['Atual'][index]
-            self.chaves['Atual'][index] = textbox.text
-            self.chaves['Última Alteração'][index] = datetime.now().strftime('%d/%m/%Y %H:%M')
+            numero_chave = self.chave_input
+            cursor.execute('SELECT Atual FROM dados_chave WHERE NumerodaChave = ?', (numero_chave,))
+            antiga_sit = cursor.fetchone()
+            antiga_sit = str(antiga_sit[0])
 
-            busca_chave(self.chave_input,self.chaves)
+            nova_sit = str(chave_pesquisa2)
+            nova_ultimaalt = datetime.now().strftime('%d/%m/%Y %H:%M')
+            consulta_sql = 'UPDATE dados_chave SET Anterior = ?, Atual = ?, ÚltimaAlteração = ? WHERE NumerodaChave = ?'
+            cursor.execute(consulta_sql, (antiga_sit, nova_sit, nova_ultimaalt, numero_chave))
+            conn.commit()
+
             self.chaves_salvou = 'Alterações pendentes'
+            
+            cursor.execute('SELECT NumerodaChave, Anterior, Atual, ÚltimaAlteração FROM dados_chave WHERE NumerodaChave = ?', (numero_chave,))
 
-            info_chaves = busca_chave(self.chave_input,self.chaves)
-            self.chave_input = info_chaves[0]
-            self.chave_atualmente_com = info_chaves[2]
-            self.chave_anteriormente_com = info_chaves[1]
-            self.chave_ultima_alteracao = info_chaves[3]
+            info_licencas = cursor.fetchone()
+
+            self.chave_input = str(info_licencas[0])
+            self.chave_anteriormente_com = str(info_licencas[1])
+            self.chave_atualmente_com = str(info_licencas[2])
+            self.chave_ultima_alteracao = str(info_licencas[3])
+
         except:
             self.chave_input = 'Chave não encontrada'
             self.chave_atualmente_com = 'Chave não encontrada'
@@ -600,20 +709,31 @@ class ControleGeral(App):
 
     def retorna_chave(self):
         try:
-            index = self.chaves.query('`Numero da Chave` == @self.chave_input').index.tolist()[0]
+            conn = sqlite3.connect('dados.db')
+            cursor = conn.cursor()
 
-            self.chaves['Anterior'][index] = self.chaves['Atual'][index]
-            self.chaves['Atual'][index] = 'Claviculário'
-            self.chaves['Última Alteração'][index] = datetime.now().strftime('%d/%m/%Y %H:%M')
+            numero_chave = self.chave_input
+            cursor.execute('SELECT Atual FROM dados_chave WHERE NumerodaChave = ?', (numero_chave,))
+            antiga_sit = cursor.fetchone()
+            antiga_sit = str(antiga_sit[0])
 
-            busca_chave(self.chave_input,self.chaves)
+            nova_sit = "Claviculário"
+            nova_ultimaalt = datetime.now().strftime('%d/%m/%Y %H:%M')
+            consulta_sql = 'UPDATE dados_chave SET Anterior = ?, Atual = ?, ÚltimaAlteração = ? WHERE NumerodaChave = ?'
+            cursor.execute(consulta_sql, (antiga_sit, nova_sit, nova_ultimaalt, numero_chave))
+            conn.commit()
+
             self.chaves_salvou = 'Alterações pendentes'
+            
+            cursor.execute('SELECT NumerodaChave, Anterior, Atual, ÚltimaAlteração FROM dados_chave WHERE NumerodaChave = ?', (numero_chave,))
 
-            info_chaves = busca_chave(self.chave_input,self.chaves)
-            self.chave_input = info_chaves[0]
-            self.chave_atualmente_com = info_chaves[2]
-            self.chave_anteriormente_com = info_chaves[1]
-            self.chave_ultima_alteracao = info_chaves[3]
+            info_licencas = cursor.fetchone()
+
+            self.chave_input = str(info_licencas[0])
+            self.chave_anteriormente_com = str(info_licencas[1])
+            self.chave_atualmente_com = str(info_licencas[2])
+            self.chave_ultima_alteracao = str(info_licencas[3])
+
         except:
             self.chave_input = 'Chave não encontrada'
             self.chave_atualmente_com = 'Chave não encontrada'
@@ -624,36 +744,68 @@ class ControleGeral(App):
         self.organiza_claviculario()
 
     def organiza_claviculario(self):
-        dicionario = dict(self.chaves.Atual.value_counts())
-        self.chaves_claviculario = str(dicionario['Claviculário'])
-        self.chaves_fora = str(len(self.chaves.Atual) - dicionario['Claviculário'])
 
-    def consultar_partealta(self,chave_pesquisa):
-        self.consulta_pben(chave_pesquisa)
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
         
-        info_partealta = busca_licenca(self.numero_atual, self.partealta)
+        cursor.execute("SELECT COUNT(Atual) AS Valor FROM dados_chave WHERE Atual = 'Claviculário'")
+        result = cursor.fetchone()
+        self.chaves_claviculario = str(result[0])
+
+        cursor.execute("SELECT COUNT(Atual) AS Valor FROM dados_chave")
+        result = cursor.fetchone()
+        self.chaves_fora = str(int(str(result[0])) - int(self.chaves_claviculario))
+
+    botao_parte_alta = StringProperty('')
+    
+    def consultar_partealta(self,chave_pesquisa):
+        
+        self.consulta_pben(chave_pesquisa)
+
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
+
+        numero_int = str(self.numero_atual)
+
+        cursor.execute('SELECT Situacao, UltimaAlt FROM dados_partealta WHERE NumeroInt = ?', (numero_int,))
+
+        info_partealta = cursor.fetchone()
+        print(info_partealta)
         self.situacao_atual_partealta = info_partealta[0]
         self.ultima_alteracao_partealta = info_partealta[1]
 
-    botao_parte_alta = StringProperty('')
+        conn.commit()
+        conn.close()
 
     def atualiza_partealta(self, button_text):
-        if button_text == '':
+        if button_text == "":
             pass
         else:
             try:
-                index = self.partealta.query('`Número Interno` == @self.numero_atual').index.tolist()[0]
-                self.partealta['Situação'][index] = button_text
-                self.partealta['Última Alteração'][index] = datetime.now().strftime('%d/%m/%Y %H:%M')
-                self.partealta_salvou = 'Alterações pendentes'
+                conn = sqlite3.connect('dados.db')
+                cursor = conn.cursor()
+
+                numero_int = self.numero_atual
+                nova_sit = str(self.botao_parte_alta)
+                nova_ultimaalt = datetime.now().strftime('%d/%m/%Y %H:%M')
+                consulta_sql = 'UPDATE dados_partealta SET Situacao = ?, UltimaAlt = ? WHERE NumeroInt = ?'
+                cursor.execute(consulta_sql, (nova_sit, nova_ultimaalt, numero_int))
+                conn.commit()
+
             except:
                 self.numero_atual = 'Selecione um aspirante'
                 self.nome_guerra = ''
+        
+        cursor.execute("SELECT Situacao, UltimaAlt FROM dados_partealta WHERE NumeroInt = ?", (numero_int,))
+        info_partealta = cursor.fetchone()
+        self.situacao_atual_partealta = str(info_partealta[0])
+        self.ultima_alteracao_partealta = str(info_partealta[1])
+        print(info_partealta)
 
-        info_partealta = busca_licenca(self.numero_atual, self.partealta)
-        self.situacao_atual_partealta = info_partealta[0]
-        self.ultima_alteracao_partealta = info_partealta[1]
+        conn.commit()
+        conn.close()
 
+        self.registro_partealta()
         self.organiza_controle_geral_partealta()
         self.organiza_primeiro_partealta()
         self.organiza_segundo_partealta()
@@ -661,144 +813,185 @@ class ControleGeral(App):
         self.organiza_quarto_partealta()
 
     def organiza_controle_geral_partealta(self):
-        dicionario_partealta_geral = dict(self.partealta['Situação'].value_counts())
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Parte Alta'")
+        result = cursor.fetchone()
+        print(result)
+        self.partealta_partealta = str(result[0])
 
-        try:
-            self.partealta_partelta = str(dicionario_partealta_geral['Parte Alta'])
-        except:
-            self.partealta_partelta = '0'
-        try:
-            self.tfm_partealta = str(dicionario_partealta_geral['TFM'])
-        except:
-            self.tfm_partealta = '0'
-        try:
-            self.saladeestado_partealta = str(dicionario_partealta_geral['Sala de Estado'])
-        except:
-            self.saladeestado_partealta = '0'
-        try:
-            self.enfermaria_partealta = str(dicionario_partealta_geral['Enfermaria'])
-        except:
-            self.enfermaria_partealta = '0'
-        try:
-            self.banco_partealta = str(dicionario_partealta_geral['Banco'])
-        except:
-            self.banco_partealta = '0'
-        try:
-            self.biblioteca_partealta = str(dicionario_partealta_geral['Biblioteca'])
-        except:
-            self.biblioteca_partealta = '0'
 
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'TFM'")
+        result = cursor.fetchone()
+        self.tfm_partealta = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Sala de Estado'")
+        result = cursor.fetchone()
+        self.saladeestado_partealta = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Enfermaria'")
+        result = cursor.fetchone()
+        self.enfermaria_partealta = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Banco'")
+        result = cursor.fetchone()
+        self.banco_partealta = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Biblioteca'")
+        result = cursor.fetchone()
+        self.biblioteca_partealta = str(result[0])
+
+        conn.commit()
+        conn.close()
+    
     def organiza_primeiro_partealta(self):
-        query = self.partealta.query('`Ano` == 1')
-        dicionario_primeiro_partealta = dict(query['Situação'].value_counts())
-        try:
-            self.partealta_partelta1 = str(dicionario_primeiro_partealta['Parte Alta'])
-        except:
-            self.partealta_partelta1 = '0'
-        try:
-            self.tfm_partealta1 = str(dicionario_primeiro_partealta['TFM'])
-        except:
-            self.tfm_partealta1 = '0'
-        try:
-            self.saladeestado_partealta1 = str(dicionario_primeiro_partealta['Sala de Estado'])
-        except:
-            self.saladeestado_partealta1 = '0'
-        try:
-            self.enfermaria_partealta1 = str(dicionario_primeiro_partealta['Enfermaria'])
-        except:
-            self.enfermaria_partealta1 = '0'
-        try:
-            self.banco_partealta1 = str(dicionario_primeiro_partealta['Banco'])
-        except:
-            self.banco_partealta1 = '0'
-        try:
-            self.biblioteca_partealta1 = str(dicionario_primeiro_partealta['Biblioteca'])
-        except:
-            self.biblioteca_partealta1 = '0'
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Parte Alta' AND Ano = 1")
+        result = cursor.fetchone()
+        self.partealta_partealta1 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'TFM' AND Ano = 1")
+        result = cursor.fetchone()
+        self.tfm_partealta1 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Sala de Estado' AND Ano = 1")
+        result = cursor.fetchone()
+        self.saladeestado_partealta1 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Enfermaria' AND Ano = 1")
+        result = cursor.fetchone()
+        self.enfermaria_partealta1 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Banco' AND Ano = 1")
+        result = cursor.fetchone()
+        self.banco_partealta1 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Biblioteca' AND Ano = 1")
+        result = cursor.fetchone()
+        self.biblioteca_partealta1 = str(result[0])
+
+        conn.commit()
+        conn.close()
 
     def organiza_segundo_partealta(self):
-        query = self.partealta.query('`Ano` == 2')
-        dicionario_segundo_partealta = dict(query['Situação'].value_counts())
-        try:
-            self.partealta_partelta2 = str(dicionario_segundo_partealta['Parte Alta'])
-        except:
-            self.partealta_partelta2 = '0'
-        try:
-            self.tfm_partealta2 = str(dicionario_segundo_partealta['TFM'])
-        except:
-            self.tfm_partealta2 = '0'
-        try:
-            self.saladeestado_partealta2 = str(dicionario_segundo_partealta['Sala de Estado'])
-        except:
-            self.saladeestado_partealta2 = '0'
-        try:
-            self.enfermaria_partealta2 = str(dicionario_segundo_partealta['Enfermaria'])
-        except:
-            self.enfermaria_partealta2 = '0'
-        try:
-            self.banco_partealta2 = str(dicionario_segundo_partealta['Banco'])
-        except:
-            self.banco_partealta2 = '0'
-        try:
-            self.biblioteca_partealta2 = str(dicionario_segundo_partealta['Biblioteca'])
-        except:
-            self.biblioteca_partealta2 = '0'
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Parte Alta' AND Ano = 2")
+        result = cursor.fetchone()
+        self.partealta_partealta2 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'TFM' AND Ano = 2")
+        result = cursor.fetchone()
+        self.tfm_partealta2 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Sala de Estado' AND Ano = 2")
+        result = cursor.fetchone()
+        self.saladeestado_partealta2 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Enfermaria' AND Ano = 2")
+        result = cursor.fetchone()
+        self.enfermaria_partealta2 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Banco' AND Ano = 2")
+        result = cursor.fetchone()
+        self.banco_partealta2 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Biblioteca' AND Ano = 2")
+        result = cursor.fetchone()
+        self.biblioteca_partealta2 = str(result[0])
+
+        conn.commit()
+        conn.close()
 
     def organiza_terceiro_partealta(self):
-        query = self.partealta.query('`Ano` == 3')
-        dicionario_terceiro_partealta = dict(query['Situação'].value_counts())
-        try:
-            self.partealta_partelta3 = str(dicionario_terceiro_partealta['Parte Alta'])
-        except:
-            self.partealta_partelta3 = '0'
-        try:
-            self.tfm_partealta3 = str(dicionario_terceiro_partealta['TFM'])
-        except:
-            self.tfm_partealta3 = '0'
-        try:
-            self.saladeestado_partealta3 = str(dicionario_terceiro_partealta['Sala de Estado'])
-        except:
-            self.saladeestado_partealta3 = '0'
-        try:
-            self.enfermaria_partealta3 = str(dicionario_terceiro_partealta['Enfermaria'])
-        except:
-            self.enfermaria_partealta3 = '0'
-        try:
-            self.banco_partealta3 = str(dicionario_terceiro_partealta['Banco'])
-        except:
-            self.banco_partealta3 = '0'
-        try:
-            self.biblioteca_partealta3 = str(dicionario_terceiro_partealta['Biblioteca'])
-        except:
-            self.biblioteca_partealta3 = '0'
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Parte Alta' AND Ano = 3")
+        result = cursor.fetchone()
+        self.partealta_partealta3 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'TFM' AND Ano = 3")
+        result = cursor.fetchone()
+        self.tfm_partealta3 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Sala de Estado' AND Ano = 3")
+        result = cursor.fetchone()
+        self.saladeestado_partealta3 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Enfermaria' AND Ano = 3")
+        result = cursor.fetchone()
+        self.enfermaria_partealta3 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Banco' AND Ano = 3")
+        result = cursor.fetchone()
+        self.banco_partealta3 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Biblioteca' AND Ano = 3")
+        result = cursor.fetchone()
+        self.biblioteca_partealta3 = str(result[0])
+
+        conn.commit()
+        conn.close()
 
     def organiza_quarto_partealta(self):
-        query = self.partealta.query('`Ano` == 4')
-        dicionario_quarto_partealta = dict(query['Situação'].value_counts())
-        try:
-            self.partealta_partelta4 = str(dicionario_quarto_partealta['Parte Alta'])
-        except:
-            self.partealta_partelta4 = '0'
-        try:
-            self.tfm_partealta4 = str(dicionario_quarto_partealta['TFM'])
-        except:
-            self.tfm_partealta4 = '0'
-        try:
-            self.saladeestado_partealta4 = str(dicionario_quarto_partealta['Sala de Estado'])
-        except:
-            self.saladeestado_partealta4 = '0'
-        try:
-            self.enfermaria_partealta4 = str(dicionario_quarto_partealta['Enfermaria'])
-        except:
-            self.enfermaria_partealta4 = '0'
-        try:
-            self.banco_partealta4 = str(dicionario_quarto_partealta['Banco'])
-        except:
-            self.banco_partealta4 = '0'
-        try:
-            self.biblioteca_partealta4 = str(dicionario_quarto_partealta['Biblioteca'])
-        except:
-            self.biblioteca_partealta4 = '0'
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Parte Alta' AND Ano = 4")
+        result = cursor.fetchone()
+        self.partealta_partealta4 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'TFM' AND Ano = 4")
+        result = cursor.fetchone()
+        self.tfm_partealta4 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Sala de Estado' AND Ano = 4")
+        result = cursor.fetchone()
+        self.saladeestado_partealta4 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Enfermaria' AND Ano = 4")
+        result = cursor.fetchone()
+        self.enfermaria_partealta4 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Banco' AND Ano = 4")
+        result = cursor.fetchone()
+        self.banco_partealta4 = str(result[0])
+
+
+        cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Biblioteca' AND Ano = 4")
+        result = cursor.fetchone()
+        self.biblioteca_partealta4 = str(result[0])
+
+        conn.commit()
+        conn.close()
 
     def atualiza_chefedodia_registrando(self):
         self.chefedodia_registrando1 = (
@@ -864,10 +1057,7 @@ class ControleGeral(App):
         self.salvar_alteracoes()
         self.popup_salvando_licenca.dismiss()
 
-    def registro_chave(self):
-        registro_chave = open("log_chave.txt", "a", encoding='utf-8')
-        registro_chave.write(f"Chave: {self.chave_input}, Atualmente com: {self.chave_atualmente_com}, Anteriormente com: {self.chave_anteriormente_com}, Última alteração: {self.chave_ultima_alteracao}\n")
-        registro_chave.close()
+
 
     def atualiza_registro_chaves(self, chave="", data="", horario=""):
         with open("log_chave.txt", "r", encoding='utf-8') as registro_chave:
@@ -984,6 +1174,9 @@ class ControleGeral(App):
         self.resumo3_licencas_texto = df3.to_string(index=False)
         self.resumo4_licencas_texto = df4.to_string(index=False)
 
+        conn.commit()
+        conn.close()
+
     def atualiza_resumo_partealta(self):
         resultado1 = ""
         resultado2 = ""
@@ -1024,22 +1217,27 @@ class ControleGeral(App):
         cursor = conn.cursor()
 
         numero_int = self.numero_atual
-        nova_situacao = self.situacao_atual_partealta
-        consulta_sql = 'UPDATE dados SET Situacao = ? WHERE NumeroInt = ?'
-        cursor.execute(consulta_sql, (nova_situacao, numero_int))
+        nova_situacao = self.situacao_atual_licenca
+        nova_ultimaalt = self.ultima_alteracao_licenca
+        consulta_sql = 'UPDATE dados_lic SET Situacao = ?,UltimaAlt = ? WHERE NumeroInt = ?'
+        cursor.execute(consulta_sql, (nova_situacao,nova_ultimaalt,numero_int))
 
         conn.commit()
         conn.close()
 
     def registro_partealta(self):
+        registro_licencas = open("log_partealta.txt", "a", encoding='utf-8')
+        registro_licencas.write(f"Número interno: {self.numero_atual}, Situação atual: {self.situacao_atual_licenca}, Última alteração: {self.ultima_alteracao_licenca}\n")
+        registro_licencas.close()
 
         conn = sqlite3.connect('dados.db')
         cursor = conn.cursor()
 
         numero_int = self.numero_atual
-        nova_situacao = self.situacao_atual_licenca
-        consulta_sql = 'UPDATE dados_partealta SET Situacao = ? WHERE NumeroInt = ?'
-        cursor.execute(consulta_sql, (nova_situacao, numero_int))
+        nova_situacao = self.situacao_atual_partealta
+        nova_ultimaalt = self.ultima_alteracao_partealta
+        consulta_sql = 'UPDATE dados_partealta SET Situacao = ?,UltimaAlt = ? WHERE NumeroInt = ?'
+        cursor.execute(consulta_sql, (nova_situacao,nova_ultimaalt,numero_int))
 
         conn.commit()
         conn.close()
@@ -1053,6 +1251,27 @@ class ControleGeral(App):
         registro_chave = open("log_chave.txt", "a", encoding='utf-8')
         registro_chave.write(texto)
         registro_chave.close()
+        registro_chave = open("log_partealta.txt", "a", encoding='utf-8')
+        registro_chave.write(texto)
+        registro_chave.close()
+        
+    def registro_chave(self):
+        registro_chave = open("log_chave.txt", "a", encoding='utf-8')
+        registro_chave.write(f"Chave: {self.chave_input}, Atualmente com: {self.chave_atualmente_com}, Anteriormente com: {self.chave_anteriormente_com}, Última alteração: {self.chave_ultima_alteracao}\n")
+        registro_chave.close() 
+
+        conn = sqlite3.connect('dados.db')
+        cursor = conn.cursor()
+
+        numero_chave = self.chave_input
+        antiga_situacao = self.chave_anteriormente_com
+        nova_situacao = self.chave_atualmente_com
+        nova_ultimaalt = self.chave_ultima_alteracao
+        consulta_sql = 'UPDATE dados_chave SET Anterior = ?, Atual = ?, ÚltimaAlteração = ? WHERE NumerodaChave = ?'
+        cursor.execute(consulta_sql, (antiga_situacao, nova_situacao, nova_ultimaalt, numero_chave))
+
+        conn.commit()
+        conn.close()   
     
 if __name__ == '__main__':
     ControleGeral().run()
