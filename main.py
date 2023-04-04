@@ -32,8 +32,13 @@ class Consulta(BoxLayout):
 class Consulta_Licenca(BoxLayout):
     pass
 
+class IniciarScreen(Screen):
+    pass
 
 class MenuScreen(Screen):
+    pass
+
+class DedicatoriaScreen(Screen):
     pass
 
 class PbenScreen(Screen):
@@ -72,59 +77,75 @@ class ControleGeral(App):
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
 
-        Window.size = (1920,1080)
-        Window.fullscreen = True
-
-        self.pben = pd.read_excel('teste.ods', engine = 'odf', sheet_name= 'PBEN')
-
-        self.aspirantes = cria_aspirantes(self.pben)
+       # Window.size = (1920,1080)
 
         conn = sqlite3.connect('dados.db')
         cursor = conn.cursor()
-        
-        cursor.execute('SELECT NumeroInt, Situacao FROM dados_lic')
-        licencas_num_sit = cursor.fetchall()
 
-        self.licencas = pd.DataFrame(licencas_num_sit, columns=['Número Interno','Situação'])
+        cursor.execute ("SELECT * from dados_pben")
+        data = cursor.fetchall()
+
+        colunas = ["NúmeroInternoAtual",
+                "NúmeroInterno2022",
+                "NúmeroInterno2021",
+                "NúmeroInterno2020",
+                "NúmeroInterno2019",
+                "NomedeGuerra",
+                "NomeCompleto",
+                "Companhia",
+                "Pelotão",
+                "Alojamento/Camarote",
+                "N.I.P.",
+                "NúmerodaID.Militar",
+                "Quarto/Habilitação",
+                "TelefonedeContato",
+                "CelulardeContato",
+                "DatadeNascimento",
+                "TipoSanguíneo+FatorRH",
+                "Equipe",
+                "E-mail",
+                "Religião",
+                "Cidade",
+                "Estado",
+                "Bairro",
+                "Endereço",
+                "CEP",
+                "NomedoPai",
+                "ProfissãodoPai",
+                "CasooPaiSejaMilitar-ForçaArmada/ForçaAuxiliar",
+                "CasooPaiSejaMilitar-PostoouGraduação",
+                "NomedaMãe",
+                "ProfissãodaMãe",
+                "CasoaMãeSejaMilitar-ForçaArmada/ForçaAuxiliar",
+                "CasoaMãeSejaMilitar-PostoouGraduação",
+                "Descrição"]
+        
+        self.pben= pd.DataFrame(data, columns=colunas)
+
+        self.aspirantes = cria_aspirantes(self.pben)
 
         self.popup_content= Label(text='Salvando...',color = (0.18, 0.28, 0.40, 1), bold= True)
         self.popup_salvando_licenca = Popup(title ='Salvando',content = self.popup_content,
         size_hint=(None, None), size=(300, 300))
 
-        self.popup_content2= Label(text='O Número/Nome não foi encontrado! Tente novamente',color = (0.18, 0.28, 0.40, 1), bold= True)
-        self.popup_verica_numero = Popup(title ='Erro!',content = self.popup_content2,
-        size_hint=(None, None), size=(300, 300))
-
+        # Inicializa os números contidos na tabela dados_lic e monstra os numeros salvos 
         self.organiza_controle_geral_licenca()
         self.organiza_primeiro_licenca()
         self.organiza_segundo_licenca()
         self.organiza_terceiro_licenca()
         self.organiza_quarto_licenca()
         
-        conn = sqlite3.connect('dados.db')
-        cursor = conn.cursor()
-        
-        cursor.execute('SELECT NumerodaChave,Anterior, Atual FROM dados_chave')
-        chaves_num_sit = cursor.fetchall()
-
-        self.licencas = pd.DataFrame(chaves_num_sit, columns=['Número da Chave','Situação Anterior','Situação Atual'])
-
+        # Inicializa os números contidos na tabela dados_chave e monstra os numeros salvos 
         self.organiza_claviculario()
 
-        conn = sqlite3.connect('dados.db')
-        cursor = conn.cursor()
-        
-        cursor.execute('SELECT NumeroInt, Situacao FROM dados_partealta')
-        partealta_num_sit = cursor.fetchall()
-
-        self.partealta = pd.DataFrame(partealta_num_sit, columns=['Número Interno','Situação'])
-
+        # Inicializa os números contidos na tabela dados_partealta e monstra os numeros salvos 
         self.organiza_controle_geral_partealta()
         self.organiza_primeiro_partealta()
         self.organiza_segundo_partealta()
         self.organiza_terceiro_partealta()
         self.organiza_quarto_partealta()
 
+        # ATUALIZAR PARA SISTEMA SQL !!!
         self.chefedia = pd.read_excel('teste.ods', engine = 'odf', sheet_name= 'ChefeDia')
 
     nome_guerra = StringProperty()
@@ -300,6 +321,7 @@ class ControleGeral(App):
     def build(self):
         # Create the screen manager
         self.sm = ScreenManager()
+        #self.sm.add_widget(IniciarScreen(name='iniciar'))
         self.sm.add_widget(MenuScreen(name='menu'))
         self.sm.add_widget(PbenScreen(name='pben'))
         self.sm.add_widget(LicencaScreen(name='licenca'))
@@ -311,6 +333,7 @@ class ControleGeral(App):
         self.sm.add_widget(ResumoParteAltaScreen(name='resumopartealta'))
         self.sm.add_widget(ChefeDiaScreen(name='chefedia'))
         self.sm.add_widget(VerChefesDiaScreen(name='verchefesdia'))
+        self.sm.add_widget(DedicatoriaScreen(name='dedicatoria'))
 
         self.dados_principais = DadosPrincipais()
         self.consulta_licenca = Consulta_Licenca()
@@ -341,20 +364,26 @@ class ControleGeral(App):
     BOTAO_PRESSIONADO = StringProperty('')
 
     def consultar_licenca(self, chave_pesquisa):
-       
-        self.consulta_pben(chave_pesquisa)
 
         conn = sqlite3.connect('dados.db')
         cursor = conn.cursor()
 
-        numero_int = str(self.numero_atual)
+        aspirante = busca_aspirante(self.aspirantes, chave_pesquisa)
 
+        self.numero_atual = str(aspirante.numero_interno_atual)
+        numero_int = aspirante.numero_interno_atual
+        
         cursor.execute('SELECT Situacao, UltimaAlt FROM dados_lic WHERE NumeroInt = ?', (numero_int,))
 
         info_licencas = cursor.fetchone()
 
-        self.situacao_atual_licenca = str(info_licencas[0])
-        self.ultima_alteracao_licenca = str(info_licencas[1])
+        if info_licencas is None:
+            self.situacao_atual_licenca = "Não encontrado"
+            self.ultima_alteracao_licenca = "Não encontrado"
+        else:
+            self.nome_guerra = str(aspirante.nome_guerra)
+            self.situacao_atual_licenca = info_licencas[0]
+            self.ultima_alteracao_licenca = info_licencas[1]      
 
         conn.commit()
         conn.close()
@@ -378,40 +407,52 @@ class ControleGeral(App):
                 self.numero_atual = 'Selecione um aspirante'
                 self.nome_guerra = ''
         
-        cursor.execute("SELECT Situacao, UltimaAlt FROM dados_lic WHERE NumeroInt = ?", (numero_int,))
-        info_licencas = cursor.fetchone()
-        self.situacao_atual_licenca = str(info_licencas[0])
-        self.ultima_alteracao_licenca = str(info_licencas[1])
 
-        conn.commit()
-        conn.close()
-
-        self.registro_licencas()
-        self.organiza_controle_geral_licenca()
-        self.organiza_primeiro_licenca()
-        self.organiza_segundo_licenca()
-        self.organiza_terceiro_licenca()
-        self.organiza_quarto_licenca()
+        if button_text == "":
+            self.numero_atual = 'Selecione a ação desejada!'
+            self.nome_guerra = ''
+            self.situacao_atual_licenca = ""
+            self.ultima_alteracao_licenca = ""
+        else:
+            cursor.execute("SELECT Situacao, UltimaAlt FROM dados_lic WHERE NumeroInt = ?", (numero_int,))
+            info_licencas = cursor.fetchone()
+            
+            if info_licencas is None:
+                self.situacao_atual_licenca = "Não encontrado"
+                self.ultima_alteracao_licenca = "Não encontrado"
+            else:
+                self.situacao_atual_licenca = info_licencas[0]
+                self.ultima_alteracao_licenca = info_licencas[1] 
+            
+                self.registro_licencas()
+                self.organiza_controle_geral_licenca()
+                self.organiza_primeiro_licenca()
+                self.organiza_segundo_licenca()
+                self.organiza_terceiro_licenca()
+                self.organiza_quarto_licenca()
+            
+            conn.commit()
+            conn.close()
     
     def salvar_alteracoes(self):
 
         writer = pd.ExcelWriter('teste.ods', engine='odf')
-        self.licencas.to_excel(writer, sheet_name ='Licenças' ,encoding='utf-8', engine='odf', index=False, )
+        # self.licencas.to_excel(writer, sheet_name ='Licenças' ,encoding='utf-8', engine='odf', index=False, )
         self.pben.to_excel(writer, sheet_name ='PBEN' ,encoding='utf-8', engine='odf', index=False)
-        self.chaves.to_excel(writer, sheet_name ='Chaves' ,encoding='utf-8', engine='odf', index=False)
-        self.partealta.to_excel(writer, sheet_name ='ParteAlta' ,encoding='utf-8', engine='odf', index=False)
+        # self.chaves.to_excel(writer, sheet_name ='Chaves' ,encoding='utf-8', engine='odf', index=False)
+        # self.partealta.to_excel(writer, sheet_name ='ParteAlta' ,encoding='utf-8', engine='odf', index=False)
         self.chefedia.to_excel(writer, sheet_name ='ChefeDia' ,encoding='utf-8', engine='odf', index=False)
         writer.save()
 
-        self.licencas = pd.read_excel('teste.ods', engine = 'odf', sheet_name= 'Licenças')
-        self.chaves = pd.read_excel('teste.ods', engine = 'odf', sheet_name= 'Chaves')
-        self.partealta = pd.read_excel('teste.ods', engine = 'odf', sheet_name= 'ParteAlta')
+        # self.licencas = pd.read_excel('teste.ods', engine = 'odf', sheet_name= 'Licenças')
+        # self.chaves = pd.read_excel('teste.ods', engine = 'odf', sheet_name= 'Chaves')
+        # self.partealta = pd.read_excel('teste.ods', engine = 'odf', sheet_name= 'ParteAlta')
         self.chefedia = pd.read_excel('teste.ods', engine = 'odf', sheet_name= 'ChefeDia')
 
-        self.licencas['Última Alteração'] = self.licencas['Última Alteração'].astype('str')
-        self.licencas['Número Interno'] = self.licencas['Número Interno'].astype('str')
-        self.partealta['Última Alteração'] = self.partealta['Última Alteração'].astype('str')
-        self.partealta['Número Interno'] = self.partealta['Número Interno'].astype('str')
+        # self.licencas['Última Alteração'] = self.licencas['Última Alteração'].astype('str')
+        # self.licencas['Número Interno'] = self.licencas['Número Interno'].astype('str')
+        # self.partealta['Última Alteração'] = self.partealta['Última Alteração'].astype('str')
+        # self.partealta['Número Interno'] = self.partealta['Número Interno'].astype('str')
 
         self.chaves_salvou = 'Sem alterações'
         self.licenca_salvou = 'Sem alterações'
@@ -651,25 +692,38 @@ class ControleGeral(App):
         conn.commit()
         conn.close()
 
-    def input_texto_chave(self,textbox):
-        self.chave_input = textbox
-    
-        conn = sqlite3.connect('dados.db')
-        cursor = conn.cursor()
+    def input_texto_chave(self,textbox): 
 
-        numero_chave = str(self.chave_input)
+        if textbox == "":
+            self.chave_input = "Digite um valor válido!"
+            self.chave_anteriormente_com = ""
+            self.chave_atualmente_com = ""
+            self.chave_ultima_alteracao = ""
+        else:
+            self.chave_input = textbox
+        
+            conn = sqlite3.connect('dados.db')
+            cursor = conn.cursor()
 
-        cursor.execute('SELECT NumerodaChave, Anterior, Atual, ÚltimaAlteração FROM dados_chave WHERE NumerodaChave = ?', (numero_chave,))
+            numero_chave = str(self.chave_input)
 
-        info_licencas = cursor.fetchone()
+            cursor.execute('SELECT NumerodaChave, Anterior, Atual, ÚltimaAlteração FROM dados_chave WHERE NumerodaChave = ?', (numero_chave,))
 
-        self.chave_input = str(info_licencas[0])
-        self.chave_anteriormente_com = str(info_licencas[1])
-        self.chave_atualmente_com = str(info_licencas[2])
-        self.chave_ultima_alteracao = str(info_licencas[3])
+            info_chave = cursor.fetchone()
 
-        conn.commit()
-        conn.close()
+            if info_chave is None:
+                self.chave_input = "Não encontrado"
+                self.chave_anteriormente_com = "Não encontrado"
+                self.chave_atualmente_com = "Não encontrado"
+                self.chave_ultima_alteracao = "Não encontrado"
+            else:
+                self.chave_input = str(info_chave[0])
+                self.chave_anteriormente_com = str(info_chave[1])
+                self.chave_atualmente_com = str(info_chave[2])
+                self.chave_ultima_alteracao = str(info_chave[3]) 
+
+            conn.commit()
+            conn.close()
 
     def dar_chave(self,chave_pesquisa2):
         try:
@@ -691,13 +745,19 @@ class ControleGeral(App):
             
             cursor.execute('SELECT NumerodaChave, Anterior, Atual, ÚltimaAlteração FROM dados_chave WHERE NumerodaChave = ?', (numero_chave,))
 
-            info_licencas = cursor.fetchone()
+            info_chave = cursor.fetchone()
 
-            self.chave_input = str(info_licencas[0])
-            self.chave_anteriormente_com = str(info_licencas[1])
-            self.chave_atualmente_com = str(info_licencas[2])
-            self.chave_ultima_alteracao = str(info_licencas[3])
-
+            if info_chave is None:
+                self.chave_input = "Não encontrado"
+                self.chave_anteriormente_com = "Não encontrado"
+                self.chave_atualmente_com = "Não encontrado"
+                self.chave_ultima_alteracao = "Não encontrado"
+            else:
+                self.chave_input = str(info_chave[0])
+                self.chave_anteriormente_com = str(info_chave[1])
+                self.chave_atualmente_com = str(info_chave[2])
+                self.chave_ultima_alteracao = str(info_chave[3]) 
+        
         except:
             self.chave_input = 'Chave não encontrada'
             self.chave_atualmente_com = 'Chave não encontrada'
@@ -727,12 +787,19 @@ class ControleGeral(App):
             
             cursor.execute('SELECT NumerodaChave, Anterior, Atual, ÚltimaAlteração FROM dados_chave WHERE NumerodaChave = ?', (numero_chave,))
 
-            info_licencas = cursor.fetchone()
+            info_chave = cursor.fetchone()
 
-            self.chave_input = str(info_licencas[0])
-            self.chave_anteriormente_com = str(info_licencas[1])
-            self.chave_atualmente_com = str(info_licencas[2])
-            self.chave_ultima_alteracao = str(info_licencas[3])
+            if info_chave is None:
+                self.chave_input = "Não encontrado"
+                self.chave_anteriormente_com = "Não encontrado"
+                self.chave_atualmente_com = "Não encontrado"
+                self.chave_ultima_alteracao = "Não encontrado"
+            else:
+                self.chave_input = str(info_chave[0])
+                self.chave_anteriormente_com = str(info_chave[1])
+                self.chave_atualmente_com = str(info_chave[2])
+                self.chave_ultima_alteracao = str(info_chave[3]) 
+        
 
         except:
             self.chave_input = 'Chave não encontrada'
@@ -759,20 +826,26 @@ class ControleGeral(App):
     botao_parte_alta = StringProperty('')
     
     def consultar_partealta(self,chave_pesquisa):
-        
-        self.consulta_pben(chave_pesquisa)
 
         conn = sqlite3.connect('dados.db')
         cursor = conn.cursor()
 
-        numero_int = str(self.numero_atual)
+        aspirante = busca_aspirante(self.aspirantes, chave_pesquisa)
+
+        self.numero_atual = str(aspirante.numero_interno_atual)
+        numero_int = aspirante.numero_interno_atual
 
         cursor.execute('SELECT Situacao, UltimaAlt FROM dados_partealta WHERE NumeroInt = ?', (numero_int,))
-
+        
         info_partealta = cursor.fetchone()
-        print(info_partealta)
-        self.situacao_atual_partealta = info_partealta[0]
-        self.ultima_alteracao_partealta = info_partealta[1]
+        
+        if info_partealta is None:
+            self.situacao_atual_partealta = "Não encontrado"
+            self.ultima_alteracao_partealta = "Não encontrado"
+        else:
+            self.nome_guerra = str(aspirante.nome_guerra)
+            self.situacao_atual_partealta = info_partealta[0]
+            self.ultima_alteracao_partealta = info_partealta[1]
 
         conn.commit()
         conn.close()
@@ -796,21 +869,33 @@ class ControleGeral(App):
                 self.numero_atual = 'Selecione um aspirante'
                 self.nome_guerra = ''
         
-        cursor.execute("SELECT Situacao, UltimaAlt FROM dados_partealta WHERE NumeroInt = ?", (numero_int,))
-        info_partealta = cursor.fetchone()
-        self.situacao_atual_partealta = str(info_partealta[0])
-        self.ultima_alteracao_partealta = str(info_partealta[1])
-        print(info_partealta)
+        if button_text == "":
+            self.numero_atual = 'Selecione a ação desejada!'
+            self.nome_guerra = ''
+            self.situacao_atual_partealta = ""
+            self.ultima_alteracao_partealta = ""
+        else:
+            cursor.execute("SELECT Situacao, UltimaAlt FROM dados_partealta WHERE NumeroInt = ?", (numero_int,))
+            info_partealta = cursor.fetchone()
+            
+            if info_partealta is None:
+                self.situacao_atual_partealta = "Não encontrado"
+                self.ultima_alteracao_partealta = "Não encontrado"
+            else:
+                self.situacao_atual_partealta = info_partealta[0]
+                self.ultima_alteracao_partealta = info_partealta[1]
 
-        conn.commit()
-        conn.close()
+                self.registro_partealta()
+                self.organiza_controle_geral_partealta()
+                self.organiza_primeiro_partealta()
+                self.organiza_segundo_partealta()
+                self.organiza_terceiro_partealta()
+                self.organiza_quarto_partealta()
 
-        self.registro_partealta()
-        self.organiza_controle_geral_partealta()
-        self.organiza_primeiro_partealta()
-        self.organiza_segundo_partealta()
-        self.organiza_terceiro_partealta()
-        self.organiza_quarto_partealta()
+            conn.commit()
+            conn.close()
+
+        
 
     def organiza_controle_geral_partealta(self):
         conn = sqlite3.connect('dados.db')
@@ -818,7 +903,6 @@ class ControleGeral(App):
         
         cursor.execute("SELECT COUNT(Situacao) AS Valor FROM dados_partealta WHERE Situacao = 'Parte Alta'")
         result = cursor.fetchone()
-        print(result)
         self.partealta_partealta = str(result[0])
 
 
@@ -1060,7 +1144,7 @@ class ControleGeral(App):
 
 
     def atualiza_registro_chaves(self, chave="", data="", horario=""):
-        with open("log_chave.txt", "r", encoding='utf-8') as registro_chave:
+        with open(".logs/log_chave.txt", "r", encoding='utf-8') as registro_chave:
             linhas = registro_chave.readlines()
             resultado = ""
             for linha in linhas:
@@ -1088,7 +1172,7 @@ class ControleGeral(App):
             self.registro_chaves_texto = resultado
 
     def atualiza_registro_licencas(self, numero="", data="", horario=""):
-        with open("log_licencas.txt", "r", encoding='utf-8') as registro_licencas:
+        with open(".logs/log_licencas.txt", "r", encoding='utf-8') as registro_licencas:
             linhas = registro_licencas.readlines()
             resultado = ""
             for linha in linhas:
@@ -1116,7 +1200,7 @@ class ControleGeral(App):
             self.registro_licencas_texto = resultado
 
     def atualiza_registro_partealta(self, numero="", data="", horario=""):
-        with open("log_partealta.txt", "r", encoding='utf-8') as registro_partealta:
+        with open(".logs/log_partealta.txt", "r", encoding='utf-8') as registro_partealta:
             linhas = registro_partealta.readlines()
             resultado = ""
             for linha in linhas:
@@ -1209,7 +1293,7 @@ class ControleGeral(App):
         self.resumo4_partealta_texto = df4.to_string(index=False)
 
     def registro_licencas(self):
-        registro_licencas = open("log_licencas.txt", "a", encoding='utf-8')
+        registro_licencas = open(".logs/log_licencas.txt", "a", encoding='utf-8')
         registro_licencas.write(f"Número interno: {self.numero_atual}, Situação atual: {self.situacao_atual_licenca}, Última alteração: {self.ultima_alteracao_licenca}\n")
         registro_licencas.close()
 
@@ -1226,7 +1310,7 @@ class ControleGeral(App):
         conn.close()
 
     def registro_partealta(self):
-        registro_licencas = open("log_partealta.txt", "a", encoding='utf-8')
+        registro_licencas = open(".logs/log_partealta.txt", "a", encoding='utf-8')
         registro_licencas.write(f"Número interno: {self.numero_atual}, Situação atual: {self.situacao_atual_licenca}, Última alteração: {self.ultima_alteracao_licenca}\n")
         registro_licencas.close()
 
@@ -1245,18 +1329,18 @@ class ControleGeral(App):
     def registra_salvou(self):
         agora = datetime.now().strftime('%d/%m/%Y %H:%M')
         texto = f'Alterações Salvas em: {agora}\n'
-        registro_chave = open("log_licencas.txt", "a", encoding='utf-8')
+        registro_chave = open(".logs/log_licencas.txt", "a", encoding='utf-8')
         registro_chave.write(texto)
         registro_chave.close()
-        registro_chave = open("log_chave.txt", "a", encoding='utf-8')
+        registro_chave = open(".logs/log_chave.txt", "a", encoding='utf-8')
         registro_chave.write(texto)
         registro_chave.close()
-        registro_chave = open("log_partealta.txt", "a", encoding='utf-8')
+        registro_chave = open(".logs/log_partealta.txt", "a", encoding='utf-8')
         registro_chave.write(texto)
         registro_chave.close()
         
     def registro_chave(self):
-        registro_chave = open("log_chave.txt", "a", encoding='utf-8')
+        registro_chave = open(".logs/log_chave.txt", "a", encoding='utf-8')
         registro_chave.write(f"Chave: {self.chave_input}, Atualmente com: {self.chave_atualmente_com}, Anteriormente com: {self.chave_anteriormente_com}, Última alteração: {self.chave_ultima_alteracao}\n")
         registro_chave.close() 
 

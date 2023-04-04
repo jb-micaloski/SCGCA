@@ -1,4 +1,114 @@
-MenuScreen
+IniciarScreen
+
+
+#INICIAR
+<IniciarScreen>:
+    login: login
+    senha: senha
+    BoxLayout:
+        canvas.before:
+            Color:
+                rgba: 0.77,0.77,0.77,1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        orientation: "vertical"
+        BoxLayout:
+            size_hint: 1, .1
+            Image:
+                source: 'LogoM.png'
+                size: self.texture_size
+                size_hint: .57, 2
+                pos_hint: {'center_x': 30, 'center_y': -0.2}
+        
+            Label:
+                text: 'CONTROLE GERAL'
+                color: 0.18, 0.28, 0.40, 1
+                bold: True
+                font_size: "28sp"
+                size_hint: .8, 1
+
+            Image:
+                source: 'LogoEN.png'
+                size: self.texture_size
+                size_hint: .57, 2
+                pos_hint: {'center_x': -30, 'center_y': -0.2}
+
+        BoxLayout:
+            size_hint: 1, .85
+            BoxLayout:
+                size_hint: .8, 1
+                spacing: "20dp"
+                orientation: 'vertical'
+                Label:
+                    size_hint: .1, .1
+                Label:
+                    text: 'LOGIN:'
+                    size_hint: .4, .05
+                    pos_hint: {'center_x': .57, 'center_y': .5}
+                    text_size: self.size
+                    halign: 'left'
+                    valign: 'middle'
+                    color: 0.18, 0.28, 0.40, 1
+                    bold: True
+                TextInput:
+                    id: login
+                    size_hint: .4, .05
+                    pos_hint: {'center_x': .57, 'center_y': .5}
+                    multiline: False
+                Label:
+                    text: 'SENHA:'
+                    size_hint: .4, .05
+                    pos_hint: {'center_x':.57, 'center_y': .5}
+                    text_size: self.size
+                    halign: 'left'
+                    valign: 'middle'
+                    color: 0.18, 0.28, 0.40, 1
+                    bold: True
+                TextInput:
+                    id: senha
+                    size_hint: .4, .05
+                    pos_hint: {'center_x': .57, 'center_y': .5}
+                    multiline: False
+                Label:
+                    size_hint: .1, .2
+                Button:
+                    text: 'INICIAR'
+                    background_color: 0.7, 0.56, 0.4, 1
+                    text_color: 0.77,0.77,0.77,1
+                    pos_hint: {'center_x': .57, 'center_y': .5}
+                    size_hint: .4,.1
+                    on_press: root.manager.current = 'menu'
+                    bold: True
+                    elevation: 10
+            Label:
+                size_hint: .1, 1
+
+        BoxLayout:
+            size_hint: 1, .05
+            padding: '20dp'
+            BoxLayout:
+                size_hint: .1, 1
+                Label:
+                    size_hint: .1, 1
+                Label:
+                    size_hint: .2, 1
+            Label:
+                size_hint: .9, 1
+            Button:
+                background_normal: './config.png'
+                size_hint: None, None
+                width: self.height
+                height: "50px"
+                anchor_x: 'right'
+                anchor_y: 'bottom'
+                on_press:
+                    root.manager.transition.direction = 'right'
+                    root.manager.current = 'dedicatoria'
+                background_color: 0.7, 0.56, 0.4, 1
+                text_color: 0.77,0.77,0.77,1
+                bold: True
+
 
 #MENU
 
@@ -96,6 +206,110 @@ MenuScreen
                     elevation: 10
             Label:
                 size_hint: .1, 1
+
+        BoxLayout:
+            size_hint: 1, .05
+            padding: '20dp'
+            BoxLayout:
+                size_hint: .1, 1
+                Label:
+                    size_hint: .1, 1
+                Label:
+                    size_hint: .2, 1
+            Label:
+                size_hint: .9, 1
+            Button:
+                background_normal: './config.png'
+                size_hint: None, None
+                width: self.height
+                height: "50px"
+                anchor_x: 'right'
+                anchor_y: 'bottom'
+                on_press:
+                    root.manager.transition.direction = 'right'
+                    root.manager.current = 'dedicatoria'
+                background_color: 0.7, 0.56, 0.4, 1
+                text_color: 0.77,0.77,0.77,1
+                bold: True
+
+
+
+
+#DEDICATORIA
+<DedicatoriaScreen>:
+    BoxLayout:
+        canvas.before:
+            Color:
+                rgba: 0.77,0.77,0.77,1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        orientation: "vertical"
+        BoxLayout:
+            size_hint: 1, .1
+            Image:
+                source: 'LogoM.png'
+                size: self.texture_size
+                size_hint: .57, 2
+                pos_hint: {'center_x': 30, 'center_y': -0.2}
+        
+            Label:
+                text: 'CONTROLE GERAL'
+                color: 0.18, 0.28, 0.40, 1
+                bold: True
+                font_size: "28sp"
+                size_hint: .8, 1
+
+            Image:
+                source: 'LogoEN.png'
+                size: self.texture_size
+                size_hint: .57, 2
+                pos_hint: {'center_x': -30, 'center_y': -0.2}
+
+        BoxLayout:
+            size_hint: 1, .85
+            BoxLayout:
+                size_hint: 1, 1
+                orientation: 'vertical'
+                GridLayout:
+                    cols: 1
+                    size_hint: 1, 1
+                    Label:
+                        size_hint: 1, 1
+                        text: "Idealização:"
+                        color: 0.18, 0.28, 0.40, 1
+                        bold: True
+                        font_size: "24sp"
+                        halign: "center"
+                    Label:
+                        size_hint: 1, 1
+                        text: "Asp Hartmann"
+                        color: 0.18, 0.28, 0.40, 1
+                        font_size: "21sp"
+                        halign: "center"
+                        valign: "middle"
+                    Label:
+                        size_hint: 1, 1
+                        text: "Desenvolvimento:"
+                        color: 0.18, 0.28, 0.40, 1
+                        bold: True
+                        font_size: "24sp"
+                        halign: "center"
+                    Label:
+                        size_hint: 1, 1
+                        text: "GM Micaloski"
+                        color: 0.18, 0.28, 0.40, 1
+                        font_size: "21sp"
+                        halign: "center"
+                        valign: "middle"
+                    Label:
+                        size_hint: 1, 1
+                        text: "Asp Santos Moraes"
+                        color: 0.18, 0.28, 0.40, 1
+                        font_size: "21sp"
+                        halign: "center"
+                        valign: "middle"
+
         BoxLayout:
             size_hint: 1, .05
             BoxLayout:
@@ -105,19 +319,26 @@ MenuScreen
                 Label:
                     size_hint: .2, 1
             Label:
-                size_hint: .7, 1
-            Label:
-                text: 'Pelo Aspirante Hartmann'
-                color: 0.18, 0.28, 0.40, 1
+                size_hint: .9, 1
+            Button:
+                text: 'Menu'
+                size_hint_x: None
+                width: len(self.text) * 20
+                anchor_x: 'left'
+                anchor_y: 'bottom'
+                on_press:
+                    root.manager.transition.direction = 'right'
+                    root.manager.current = 'menu'
+                background_color: 0.7, 0.56, 0.4, 1
+                text_color: 0.77,0.77,0.77,1
                 bold: True
-                size_hint: .2, 1
+    
+           
 
 #PBEN
 
 <PbenScreen>:
     chave_pesquisa: chave_pesquisa
-
-
     BoxLayout:
         canvas.before:
             Color:
@@ -215,6 +436,7 @@ MenuScreen
         #Rodape
         BoxLayout:
             size_hint: 1, .05
+            padding: "20dp"
             BoxLayout:
                 size_hint: .1, 1
                 Label:
@@ -223,26 +445,35 @@ MenuScreen
                     size_hint: .2, 1
             Label:
                 size_hint: .7, 1
-            Label:
-                text: 'Pelo Aspirante Hartmann'
-                color: 0.18, 0.28, 0.40, 1
+
+            Button:
+                background_normal: './config.png'
+                size_hint: None, None
+                width: self.height
+                height: "50px"
+                anchor_x: 'right'
+                anchor_y: 'bottom'
+                on_press:
+                    root.manager.transition.direction = 'right'
+                    root.manager.current = 'dedicatoria'
+                background_color: 0.7, 0.56, 0.4, 1
+                text_color: 0.77,0.77,0.77,1
                 bold: True
-                size_hint: .2, 1
 
     AnchorLayout:
         size_hint: .05, .05
-        anchor_x: 'left'
-        achor_y: 'bottom'
+        padding: 20, 0
         Button:
             text: 'Menu'
+            anchor_x: 'left'
+            anchor_y: 'bottom'
             on_press:
                 root.manager.transition.direction = 'right'
                 root.manager.current = 'menu'
             background_color: 0.7, 0.56, 0.4, 1
             text_color: 0.77,0.77,0.77,1
             bold: True
-
-
+        
 <DadosPrincipais@BoxLayout>:
     Label:
         text: 'Número Atual:'
@@ -824,12 +1055,6 @@ MenuScreen
         background_color: 0.7, 0.56, 0.4, 1
         text_color: 0.77,0.77,0.77,1
         bold: True
-    Label:
-        text: 'Pelo Aspirante Hartmann'
-        color: 0.18, 0.28, 0.40, 1
-        bold: True
-        size_hint: .2, 1
-
 
 <Informacoes_Licenca@GridLayout>:
     rows: 1
@@ -1342,11 +1567,6 @@ MenuScreen
         background_color: 0.7, 0.56, 0.4, 1
         text_color: 0.77,0.77,0.77,1
         bold: True
-    Label:
-        text: 'Pelo Aspirante Hartmann'
-        color: 0.18, 0.28, 0.40, 1
-        bold: True
-        size_hint: .2, 1
 
 <Interface_Chaves@BoxLayout>:
     orientation: 'vertical'
@@ -1687,11 +1907,6 @@ MenuScreen
         background_color: 0.7, 0.56, 0.4, 1
         text_color: 0.77,0.77,0.77,1
         bold: True
-    Label:
-        text: 'Pelo Aspirante Hartmann'
-        color: 0.18, 0.28, 0.40, 1
-        bold: True
-        size_hint: .2, 1
 
 <Selecionado_ParteAlta@BoxLayout>:
     spacing: "20dp"
@@ -2141,11 +2356,6 @@ MenuScreen
             size_hint: .2, 1
     Label:
         size_hint: .5, 1
-    Label:
-        text: 'Pelo Aspirante Hartmann'
-        color: 0.18, 0.28, 0.40, 1
-        bold: True
-        size_hint: .2, 1
 
 <Dados_Gerais_ResumoParteAlta@BoxLayout>:
     orientation: "vertical"
@@ -2422,11 +2632,6 @@ MenuScreen
             size_hint: .2, 1
     Label:
         size_hint: .5, 1
-    Label:
-        text: 'Pelo Aspirante Hartmann'
-        color: 0.18, 0.28, 0.40, 1
-        bold: True
-        size_hint: .2, 1
 
 <RegistroChavesScreen>:
     BoxLayout:
@@ -2499,11 +2704,6 @@ MenuScreen
             size_hint: .2, 1
     Label:
         size_hint: .5, 1
-    Label:
-        text: 'Pelo Aspirante Hartmann'
-        color: 0.18, 0.28, 0.40, 1
-        bold: True
-        size_hint: .2, 1
 
 <Corpo_RegistroChaves@BoxLayout>
     orientation: "vertical"
@@ -2624,11 +2824,6 @@ MenuScreen
             size_hint: .2, 1
     Label:
         size_hint: .5, 1
-    Label:
-        text: 'Pelo Aspirante Hartmann'
-        color: 0.18, 0.28, 0.40, 1
-        bold: True
-        size_hint: .2, 1
 
 <Corpo_RegistroLicencas@BoxLayout>
     orientation: "vertical"
@@ -2766,11 +2961,6 @@ MenuScreen
             size_hint: .2, 1
     Label:
         size_hint: .5, 1
-    Label:
-        text: 'Pelo Aspirante Hartmann'
-        color: 0.18, 0.28, 0.40, 1
-        bold: True
-        size_hint: .2, 1
 <Dados_Gerais_ResumoLicenca@BoxLayout>:
     orientation: "vertical"
     Inicio_ResumoLicencas:

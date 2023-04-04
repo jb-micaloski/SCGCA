@@ -1,0 +1,6 @@
+teste.ods
+__pycache__
+build
+temp.txt
+dist/interface/test.ods
+dist/interface/temp.txt
